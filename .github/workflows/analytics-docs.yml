@@ -25,9 +25,9 @@ jobs:
 
     steps:
       - name: Set up engine + Claude auth
-        uses: YOUR_ORG/intelligent-doc-engine/.github/actions/setup-doc-engine@main
+        uses: BindiyaKansekar/intelligent-doc-engine/.github/actions/setup-doc-engine@main
         with:
-          engine_repo: YOUR_ORG/intelligent-doc-engine
+          engine_repo: BindiyaKansekar/intelligent-doc-engine
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_credentials: ${{ secrets.CLAUDE_CREDENTIALS }}
 
