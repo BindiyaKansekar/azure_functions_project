@@ -19,6 +19,7 @@ jobs:
   generate-docs:
     name: Generate PR Documentation
     runs-on: ubuntu-latest
+    environment: CLAUDE_CREDENTIALS
     permissions:
       pull-requests: write
       contents: read
