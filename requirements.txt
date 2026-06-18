@@ -1,0 +1,9 @@
+azure-functions==1.21.3
+azure-storage-blob==12.23.1
+azure-servicebus==7.12.3
+azure-eventhub==5.11.7
+azure-identity==1.17.1
+snowflake-connector-python==3.12.3
+pydantic==2.9.2
+pydantic-settings==2.5.2
+cryptography==43.0.3

@@ -1,0 +1,20 @@
+# Local settings contain connection strings — never commit
+local.settings.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.python_packages/
+.pytest_cache/
+.venv/
+venv/
+
+# Azure Functions
+.funcignore
+bin/
+obj/
+
+# Secrets
+.env
+*.env.*

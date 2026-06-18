@@ -1,0 +1,70 @@
+name: Analytics PR Documentation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "function_app.py"
+      - "**/__init__.py"
+      - "**/function.json"
+      - "host.json"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to document"
+        required: true
+        type: number
+
+jobs:
+  generate-docs:
+    name: Generate PR Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install intelligent-doc-engine
+        run: pip install "git+https://github.com/YOUR_ORG/intelligent-doc-engine.git@main"
+
+      - name: Resolve PR number
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate analytics documentation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          analytics-doc scan-pr \
+            --provider github \
+            --repo "${{ github.repository }}" \
+            --pr "${{ steps.pr.outputs.number }}" \
+            --type azure_function_python \
+            --output "pr-${{ steps.pr.outputs.number }}-docs.md"
+
+      - name: Post documentation as PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR="${{ steps.pr.outputs.number }}"
+          [ -f "pr-${PR}-docs.md" ] && gh pr comment "$PR" \
+            --repo "${{ github.repository }}" \
+            --body-file "pr-${PR}-docs.md"
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analytics-pr-docs-${{ steps.pr.outputs.number }}
+          path: "pr-*-docs.md"
+          retention-days: 30

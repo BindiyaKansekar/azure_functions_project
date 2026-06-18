@@ -1,0 +1,51 @@
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "maxTelemetryItemsPerSecond": 20,
+        "excludedTypes": "Request"
+      }
+    },
+    "logLevel": {
+      "default": "Information",
+      "Host.Results": "Error",
+      "Function": "Information",
+      "Host.Aggregator": "Trace"
+    }
+  },
+  "functionTimeout": "00:10:00",
+  "extensions": {
+    "blobs": {
+      "maxDegreeOfParallelism": 4
+    },
+    "serviceBus": {
+      "prefetchCount": 20,
+      "maxConcurrentCalls": 8,
+      "maxConcurrentSessions": 8,
+      "messageHandlerOptions": {
+        "maxAutoRenewDuration": "00:05:00"
+      }
+    },
+    "eventHubs": {
+      "batchCheckpointFrequency": 5,
+      "eventProcessorOptions": {
+        "maxBatchSize": 100,
+        "prefetchCount": 300
+      }
+    },
+    "queues": {
+      "maxPollingInterval": "00:00:02",
+      "visibilityTimeout": "00:00:30",
+      "batchSize": 16,
+      "maxDequeueCount": 5
+    }
+  },
+  "retry": {
+    "strategy": "exponentialBackoff",
+    "maxRetryCount": 3,
+    "minimumInterval": "00:00:02",
+    "maximumInterval": "00:00:30"
+  }
+}
