@@ -1,4 +1,4 @@
-name: Analytics PR Documentation
+﻿name: Analytics PR Documentation
 
 on:
   pull_request:
@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Set up engine + Claude auth
-        uses: BindiyaKansekar/intelligent-doc-engine/.github/actions/setup-doc-engine@main
+        uses: BindiyaKansekar/intelligent-doc-engine/.github/actions/setup-doc-engine@master
         with:
           engine_repo: BindiyaKansekar/intelligent-doc-engine
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
