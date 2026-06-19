@@ -1,4 +1,4 @@
-﻿name: Analytics PR Documentation
+name: Analytics PR Documentation
 
 on:
   pull_request:
@@ -51,7 +51,27 @@ jobs:
             --repo "${{ github.repository }}" \
             --pr "${{ steps.pr.outputs.number }}" \
             --type azure_function_python \
-            --output "pr-${{ steps.pr.outputs.number }}-docs.md"
+            --output "pr-${{ steps.pr.outputs.number }}-docs.md" \
+            --also-html "pr-${{ steps.pr.outputs.number }}-docs.html"
+
+      - name: Upload docs artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analytics-pr-docs-${{ steps.pr.outputs.number }}
+          path: "pr-*-docs.*"
+          retention-days: 30
+
+      - name: Append artifact link to docs
+        if: steps.upload.outputs.artifact-url != ''
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          echo "" >> "pr-${PR}-docs.md"
+          echo "---" >> "pr-${PR}-docs.md"
+          echo "> 📊 **[View Interactive Lineage Report](${ARTIFACT_URL})** — Download the HTML report with interactive data lineage diagram" >> "pr-${PR}-docs.md"
 
       - name: Post documentation as PR comment
         env:
@@ -61,11 +81,3 @@ jobs:
           [ -f "pr-${PR}-docs.md" ] && gh pr comment "$PR" \
             --repo "${{ github.repository }}" \
             --body-file "pr-${PR}-docs.md"
-
-      - name: Upload docs artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: analytics-pr-docs-${{ steps.pr.outputs.number }}
-          path: "pr-*-docs.md"
-          retention-days: 30
