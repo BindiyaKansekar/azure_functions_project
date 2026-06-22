@@ -14,6 +14,14 @@ on:
         description: "PR number to document"
         required: true
         type: number
+      scope:
+        description: "Documentation scope"
+        required: true
+        type: choice
+        options:
+          - "PR changes only"
+          - "Full repository"
+        default: "PR changes only"
 
 jobs:
   generate-docs:
@@ -33,6 +41,10 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_credentials: ${{ secrets.CLAUDE_CREDENTIALS }}
 
+      - name: Checkout repository (full repo scan only)
+        if: github.event.inputs.scope == 'Full repository'
+        uses: actions/checkout@v4
+
       - name: Resolve PR number
         id: pr
         run: |
@@ -46,13 +58,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          analytics-doc scan-pr \
-            --provider github \
-            --repo "${{ github.repository }}" \
-            --pr "${{ steps.pr.outputs.number }}" \
-            --type azure_function_python \
-            --output "pr-${{ steps.pr.outputs.number }}-docs.md" \
-            --also-html "pr-${{ steps.pr.outputs.number }}-docs.html"
+          PR="${{ steps.pr.outputs.number }}"
+          SCOPE="${{ github.event.inputs.scope }}"
+
+          if [ "$SCOPE" = "Full repository" ]; then
+            analytics-doc scan-dir \
+              --path . \
+              --type azure_function_python \
+              --output "pr-${PR}-docs.md" \
+              --also-html "pr-${PR}-docs.html" \
+              --title "Full Repository — Azure Functions"
+          else
+            analytics-doc scan-pr \
+              --provider github \
+              --repo "${{ github.repository }}" \
+              --pr "${PR}" \
+              --type azure_function_python \
+              --output "pr-${PR}-docs.md" \
+              --also-html "pr-${PR}-docs.html"
+          fi
 
       - name: Upload docs artifact
         id: upload
@@ -68,10 +92,12 @@ jobs:
         env:
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
           PR: ${{ steps.pr.outputs.number }}
+          SCOPE: ${{ github.event.inputs.scope }}
         run: |
+          SCOPE_LABEL="${SCOPE:-PR changes only}"
           echo "" >> "pr-${PR}-docs.md"
           echo "---" >> "pr-${PR}-docs.md"
-          echo "> 📊 **[View Interactive Lineage Report](${ARTIFACT_URL})** — Download the HTML report with interactive data lineage diagram" >> "pr-${PR}-docs.md"
+          echo "> 📊 **[View Interactive Lineage Report](${ARTIFACT_URL})** — ${SCOPE_LABEL}" >> "pr-${PR}-docs.md"
 
       - name: Post documentation as PR comment
         env:
