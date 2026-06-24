@@ -13,7 +13,7 @@ on:
       pr_number:
         description: "PR number to document"
         required: true
-        type: number
+        type: string
       scope:
         description: "Documentation scope"
         required: true
