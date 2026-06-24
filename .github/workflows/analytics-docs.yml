@@ -89,23 +89,15 @@ jobs:
           path: "pr-*-docs.*"
           retention-days: 30
 
-      - name: Append artifact link to docs
+      - name: Post link as PR comment
         if: steps.upload.outputs.artifact-url != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
-          PR: ${{ steps.pr.outputs.number }}
           SCOPE: ${{ github.event.inputs.scope }}
         run: |
-          SCOPE_LABEL="${SCOPE:-PR changes only}"
-          echo "" >> "pr-${PR}-docs.md"
-          echo "---" >> "pr-${PR}-docs.md"
-          echo "> 📊 **[View Interactive Lineage Report](${ARTIFACT_URL})** — ${SCOPE_LABEL}" >> "pr-${PR}-docs.md"
-
-      - name: Post documentation as PR comment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
           PR="${{ steps.pr.outputs.number }}"
-          [ -f "pr-${PR}-docs.md" ] && gh pr comment "$PR" \
+          SCOPE_LABEL="${SCOPE:-PR changes only}"
+          gh pr comment "$PR" \
             --repo "${{ github.repository }}" \
-            --body-file "pr-${PR}-docs.md"
+            --body "> 📊 **[Download Documentation](${ARTIFACT_URL})** — ${SCOPE_LABEL} (.md · .html · .docx)"
