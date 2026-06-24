@@ -10,10 +10,6 @@ on:
       - "host.json"
   workflow_dispatch:
     inputs:
-      pr_number:
-        description: "PR number to document"
-        required: true
-        type: number
       scope:
         description: "Documentation scope"
         required: true
@@ -22,6 +18,10 @@ on:
           - "PR changes only"
           - "Full repository"
         default: "PR changes only"
+      pr_number:
+        description: "PR number (required for 'PR changes only')"
+        required: false
+        type: string
 
 jobs:
   generate-docs:
@@ -45,59 +45,66 @@ jobs:
         if: github.event.inputs.scope == 'Full repository'
         uses: actions/checkout@v4
 
-      - name: Resolve PR number
-        id: pr
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
-          else
-            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Generate analytics documentation
+        id: gen
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR="${{ steps.pr.outputs.number }}"
           SCOPE="${{ github.event.inputs.scope }}"
+          PR_OUT=""
 
           if [ "$SCOPE" = "Full repository" ]; then
+            OUT_BASE="repo-docs"
             analytics-doc scan-dir \
               --path . \
               --type azure_function_python \
-              --output "pr-${PR}-docs.md" \
-              --also-html "pr-${PR}-docs.html" \
-              --also-docx "pr-${PR}-docs.docx" \
+              --output "${OUT_BASE}.md" \
+              --also-html "${OUT_BASE}.html" \
+              --also-docx "${OUT_BASE}.docx" \
               --title "Full Repository — Azure Functions"
           else
+            PR="${{ github.event.inputs.pr_number || github.event.pull_request.number }}"
+            OUT_BASE="pr-${PR}-docs"
             analytics-doc scan-pr \
               --provider github \
               --repo "${{ github.repository }}" \
               --pr "${PR}" \
               --type azure_function_python \
-              --output "pr-${PR}-docs.md" \
-              --also-html "pr-${PR}-docs.html" \
-              --also-docx "pr-${PR}-docs.docx"
+              --output "${OUT_BASE}.md" \
+              --also-html "${OUT_BASE}.html" \
+              --also-docx "${OUT_BASE}.docx"
+            PR_OUT="${PR}"
           fi
+
+          echo "out_base=${OUT_BASE}" >> $GITHUB_OUTPUT
+          echo "pr=${PR_OUT}" >> $GITHUB_OUTPUT
 
       - name: Upload docs artifact
         id: upload
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: analytics-pr-docs-${{ steps.pr.outputs.number }}
-          path: "pr-*-docs.*"
+          name: analytics-docs-${{ steps.gen.outputs.out_base }}
+          path: "${{ steps.gen.outputs.out_base }}.*"
           retention-days: 30
 
       - name: Post link as PR comment
-        if: steps.upload.outputs.artifact-url != ''
+        if: github.event.inputs.scope != 'Full repository' && steps.upload.outputs.artifact-url != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          PR: ${{ steps.gen.outputs.pr }}
+        run: |
+          gh pr comment "${PR}" \
+            --repo "${{ github.repository }}" \
+            --body "> 📊 **[Download Documentation](${ARTIFACT_URL})** — (.md · .html · .docx)"
+
+      - name: Write job summary
+        if: always()
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
           SCOPE: ${{ github.event.inputs.scope }}
         run: |
-          PR="${{ steps.pr.outputs.number }}"
           SCOPE_LABEL="${SCOPE:-PR changes only}"
-          gh pr comment "$PR" \
-            --repo "${{ github.repository }}" \
-            --body "> 📊 **[Download Documentation](${ARTIFACT_URL})** — ${SCOPE_LABEL} (.md · .html · .docx)"
+          echo "## 📊 Analytics Documentation — ${SCOPE_LABEL}" >> $GITHUB_STEP_SUMMARY
+          [ -n "${ARTIFACT_URL}" ] && echo "- **[Download All Docs](${ARTIFACT_URL})** (.md · .html · .docx)" >> $GITHUB_STEP_SUMMARY || true
