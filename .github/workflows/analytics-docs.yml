@@ -70,7 +70,7 @@ jobs:
               --output "pr-${PR}-docs.md" \
               --also-html "pr-${PR}-docs.html" \
               --also-docx "pr-${PR}-docs.docx" \
-              --title "Full Repository — Azure Functions (PR #${PR})"
+              --title "Full Repository - Azure Functions (PR #${PR})"
           else
             analytics-doc scan-pr \
               --provider github \
@@ -137,7 +137,7 @@ jobs:
         run: |
           PR="${{ steps.pr.outputs.number }}"
           SCOPE_LABEL="${SCOPE:-PR changes only}"
+          BODY=$(printf '[View Report](%s) - %s\n[Download Word Doc](%s)' "${HTML_URL}" "${SCOPE_LABEL}" "${DOCX_URL}")
           gh pr comment "${PR}" \
             --repo "${{ github.repository }}" \
-            --body "> 📊 **[View Interactive Lineage Report](${HTML_URL})** — ${SCOPE_LABEL} · Opens directly in browser
-> 📄 **[Download Word Document](${DOCX_URL})** — Full documentation as .docx"
+            --body "${BODY}"
