@@ -67,6 +67,7 @@ jobs:
               --type azure_function_python \
               --output "pr-${PR}-docs.md" \
               --also-html "pr-${PR}-docs.html" \
+              --also-docx "pr-${PR}-docs.docx" \
               --title "Full Repository — Azure Functions"
           else
             analytics-doc scan-pr \
@@ -75,7 +76,8 @@ jobs:
               --pr "${PR}" \
               --type azure_function_python \
               --output "pr-${PR}-docs.md" \
-              --also-html "pr-${PR}-docs.html"
+              --also-html "pr-${PR}-docs.html" \
+              --also-docx "pr-${PR}-docs.docx"
           fi
 
       - name: Upload docs artifact
