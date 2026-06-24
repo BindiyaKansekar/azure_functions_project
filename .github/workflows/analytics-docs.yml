@@ -30,7 +30,7 @@ jobs:
     environment: CLAUDE_CREDENTIALS
     permissions:
       pull-requests: write
-      contents: read
+      contents: write
 
     steps:
       - name: Set up engine + Claude auth
@@ -91,15 +91,53 @@ jobs:
           path: "pr-*-docs.*"
           retention-days: 30
 
-      - name: Post link as PR comment
-        if: steps.upload.outputs.artifact-url != ''
+      - name: Publish to GitHub Pages
+        id: pages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          PR: ${{ steps.pr.outputs.number }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git clone --branch gh-pages --depth 1 \
+              "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" \
+              _gh_pages 2>/dev/null; then
+            mkdir _gh_pages && cd _gh_pages
+            git init
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+            git checkout --orphan gh-pages
+            echo "<html><body><h1>Analytics Documentation</h1></body></html>" > index.html
+            git add index.html
+            git commit -m "init: create gh-pages branch [skip ci]"
+            git push origin gh-pages
+            cd ..
+          fi
+
+          cp "pr-${PR}-docs.html" "_gh_pages/pr-${PR}-docs.html"
+          cp "pr-${PR}-docs.docx" "_gh_pages/pr-${PR}-docs.docx"
+          cd _gh_pages
+          git add -f "pr-${PR}-docs.html" "pr-${PR}-docs.docx"
+          git commit -m "docs: PR #${PR} analytics report [skip ci]" || echo "No changes"
+          git push origin gh-pages
+
+          BASE_URL="https://${OWNER}.github.io/${REPO_NAME}"
+          echo "html_url=${BASE_URL}/pr-${PR}-docs.html" >> $GITHUB_OUTPUT
+          echo "docx_url=${BASE_URL}/pr-${PR}-docs.docx" >> $GITHUB_OUTPUT
+
+      - name: Post link as PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HTML_URL: ${{ steps.pages.outputs.html_url }}
+          DOCX_URL: ${{ steps.pages.outputs.docx_url }}
           SCOPE: ${{ github.event.inputs.scope }}
         run: |
           PR="${{ steps.pr.outputs.number }}"
           SCOPE_LABEL="${SCOPE:-PR changes only}"
           gh pr comment "${PR}" \
             --repo "${{ github.repository }}" \
-            --body "> 📊 **[Download Documentation](${ARTIFACT_URL})** — ${SCOPE_LABEL} (.md · .html · .docx)"
+            --body "> 📊 **[View Interactive Lineage Report](${HTML_URL})** — ${SCOPE_LABEL} · Opens directly in browser
+> 📄 **[Download Word Document](${DOCX_URL})** — Full documentation as .docx"
