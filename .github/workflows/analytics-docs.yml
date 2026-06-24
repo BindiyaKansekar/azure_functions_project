@@ -1,4 +1,4 @@
-name: Analytics PR Documentation
+﻿name: Analytics PR Documentation
 
 on:
   pull_request:
@@ -117,12 +117,23 @@ jobs:
             cd ..
           fi
 
+          # Enable GitHub Pages if not already enabled
+          gh api repos/${REPO}/pages \
+            --method POST \
+            -f source.branch=gh-pages \
+            -f source.path=/ \
+            2>/dev/null || true
+
           cp "pr-${PR}-docs.html" "_gh_pages/pr-${PR}-docs.html"
           cp "pr-${PR}-docs.docx" "_gh_pages/pr-${PR}-docs.docx"
           cd _gh_pages
           git add -f "pr-${PR}-docs.html" "pr-${PR}-docs.docx"
           git commit -m "docs: PR #${PR} analytics report [skip ci]" || echo "No changes"
           git push origin gh-pages
+
+          # Wait for Pages to build
+          echo "Waiting for GitHub Pages to build..."
+          sleep 30
 
           BASE_URL="https://${OWNER}.github.io/${REPO_NAME}"
           echo "html_url=${BASE_URL}/pr-${PR}-docs.html" >> $GITHUB_OUTPUT
