@@ -118,12 +118,6 @@ jobs:
             cd ..
           fi
 
-          # Enable GitHub Pages if not already enabled
-          gh api repos/${REPO}/pages \
-            --method POST \
-            -f source.branch=gh-pages \
-            -f source.path=/ \
-            2>/dev/null || true
 
           cp "pr-${PR}-docs.html" "_gh_pages/pr-${PR}-docs.html"
           cp "pr-${PR}-docs.docx" "_gh_pages/pr-${PR}-docs.docx"
